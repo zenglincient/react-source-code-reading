@@ -7,16 +7,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-'use strict';
+
+
 
 if (process.env.NODE_ENV !== "production") {
   (function() {
-'use strict';
+
 
 var _assign = require('object-assign');
 
 /***************** debugger packages/shared/ReactVersion.js == start *****************/
 // TODO: this is special because it gets imported during build.
+// 版本号是单独一个文件的，react dom或者react native这些有平台差异的
 var ReactVersion = '17.0.0';
 /***************** debugger packages/shared/ReactVersion.js == end *****************/
 
@@ -347,11 +349,13 @@ var RESERVED_PROPS = {
   __source: true
 };
 
+// 判断ref属性是否存在
 function hasValidRef(config) {
 
   return config.ref !== undefined;
 }
 
+// 判断key属性是否存在
 function hasValidKey(config) {
 
   return config.key !== undefined;
@@ -377,7 +381,10 @@ function hasValidKey(config) {
  * @internal
  */
 
-
+/**
+ * 将属性弄成一个json返回
+ * 这个json 是虚拟dom吗？
+ */
 var ReactElement = function (type, key, ref, self, source, owner, props) {
   var element = {
     // This tag allows us to uniquely identify this as a React Element
@@ -398,6 +405,13 @@ var ReactElement = function (type, key, ref, self, source, owner, props) {
  * See https://reactjs.org/docs/react-api.html#createelement
  */
 
+/**
+ * 
+ * @param {*} type 元素类型
+ * @param {*} config ref，key，各种props
+ * @param {*} children 子元素
+ * @returns 
+ */
 function createElement(type, config, children) {
   var propName; // Reserved names are extracted
 
@@ -427,14 +441,16 @@ function createElement(type, config, children) {
   } // Children can be more than one argument, and those are transferred onto
   // the newly allocated props object.
 
-
+  // 巧妙的判断后面有多少个子元素，秀
   var childrenLength = arguments.length - 2;
 
   if (childrenLength === 1) {
     props.children = children;
   } else if (childrenLength > 1) {
+    // 创建长度适合的空数组
     var childArray = Array(childrenLength);
 
+    // 赋值
     for (var i = 0; i < childrenLength; i++) {
       childArray[i] = arguments[i + 2];
     }
@@ -1068,7 +1084,7 @@ function startTransition(scope) {
     scope();
   } finally {
     ReactCurrentBatchConfig.transition = prevTransition;
-  }
+  } 
 }
 /***************** debugger packages/react/src/ReactStartTransition.js == end *****************/
 
@@ -1092,7 +1108,7 @@ exports.PureComponent = PureComponent;
 exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ReactSharedInternals;
 exports.cloneElement = cloneElement$1;
 exports.createContext = createContext;
-exports.createElement = createElement$1;
+exports.createElement = createElement$1; // 这里是根据元素来创建
 exports.createFactory = createFactory$1;
 exports.createRef = createRef;
 exports.forwardRef = forwardRef;

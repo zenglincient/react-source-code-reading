@@ -7,16 +7,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-'use strict';
+
 
 if (process.env.NODE_ENV !== "production") {
   (function() {
-'use strict';
 
-var React = require('react');
+
+var React = require('./react.development');
 var _assign = require('object-assign');
-var Scheduler = require('scheduler');
-var tracing = require('scheduler/tracing');
+var Scheduler = require('./scheduler.development');
+var tracing = require('./scheduler/tracing');
 
 /***************** debugger packages/shared/ReactSharedInternals.js == start *****************/
 var ReactSharedInternals = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
@@ -2685,10 +2685,6 @@ function findCurrentHostFiber(parent) {
     node.sibling.return = node.return;
     node = node.sibling;
   } // Flow needs the return null here, but ESLint complains about it.
-  // eslint-disable-next-line no-unreachable
-
-
-  return null;
 }
 function doesFiberContain(parentFiber, childFiber) {
   var node = childFiber;
@@ -15664,46 +15660,6 @@ function logCapturedError(boundary, errorInfo) {
     var error = errorInfo.value;
 
     if (false) {
-      var source = errorInfo.source;
-      var stack = errorInfo.stack;
-      var componentStack = stack !== null ? stack : ''; // Browsers support silencing uncaught errors by calling
-      // `preventDefault()` in window `error` handler.
-      // We record this information as an expando on the error.
-
-      if (error != null && error._suppressLogging) {
-        if (boundary.tag === ClassComponent) {
-          // The error is recoverable and was silenced.
-          // Ignore it and don't print the stack addendum.
-          // This is handy for testing error boundaries without noise.
-          return;
-        } // The error is fatal. Since the silencing might have
-        // been accidental, we'll surface it anyway.
-        // However, the browser would have silenced the original error
-        // so we'll print it first, and then print the stack addendum.
-
-
-        console['error'](error); // Don't transform to our wrapper
-        // For a more detailed description of this block, see:
-        // https://github.com/facebook/react/pull/13384
-      }
-
-      var componentName = source ? getComponentName(source.type) : null;
-      var componentNameMessage = componentName ? "The above error occurred in the <" + componentName + "> component:" : 'The above error occurred in one of your React components:';
-      var errorBoundaryMessage;
-      var errorBoundaryName = getComponentName(boundary.type);
-
-      if (errorBoundaryName) {
-        errorBoundaryMessage = "React will try to recreate this component tree from scratch " + ("using the error boundary you provided, " + errorBoundaryName + ".");
-      } else {
-        errorBoundaryMessage = 'Consider adding an error boundary to your tree to customize error handling behavior.\n' + 'Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.';
-      }
-
-      var combinedMessage = componentNameMessage + "\n" + componentStack + "\n\n" + ("" + errorBoundaryMessage); // In development, we provide our own message with just the component stack.
-      // We don't include the original error message and JS stack because the browser
-      // has already printed it. Even if the application swallows the error, it is still
-      // displayed by the browser thanks to the DEV-only fake event trick in ReactErrorUtils.
-
-      console['error'](combinedMessage); // Don't transform to our wrapper
     } else {
       // In production, we print the error directly.
       // This will include the message, the JS stack, and anything the browser wants to show.
@@ -20297,7 +20253,10 @@ function injectIntoDevTools(devToolsConfig) {
 
 /***************** debugger packages/react-dom/src/client/ReactDOMRoot.js == start *****************/
 
+// 初次渲染哦？
 function ReactDOMRoot(container, options) {
+  debugger
+  console.log(`run function [${arguments.callee.name}]`)
   this._internalRoot = createRootImpl(container, ConcurrentRoot, options);
 }
 
@@ -20321,6 +20280,7 @@ ReactDOMRoot.prototype.unmount = ReactDOMBlockingRoot.prototype.unmount = functi
 };
 
 function createRootImpl(container, tag, options) {
+  console.log(`run function [${arguments.callee.name}]`)
   // Tag is either LegacyRoot or Concurrent Root
   var hydrate = options != null && options.hydrate === true;
   var hydrationCallbacks = options != null && options.hydrationOptions || null;
@@ -20363,7 +20323,14 @@ function createBlockingRoot(container, options) {
 function createLegacyRoot(container, options) {
   return new ReactDOMBlockingRoot(container, LegacyRoot, options);
 }
+
+/**
+ * 检查是否是空的元素
+ * @param {*} node 
+ * @returns 
+ */
 function isValidContainer(node) {
+  console.log(`run function [${arguments.callee.name}]`)
   return !!(node && (node.nodeType === ELEMENT_NODE || node.nodeType === DOCUMENT_NODE || node.nodeType === DOCUMENT_FRAGMENT_NODE || node.nodeType === COMMENT_NODE && node.nodeValue === ' react-mount-point-unstable '));
 }
 /***************** debugger packages/react-dom/src/client/ReactDOMRoot.js == end *****************/
@@ -20372,6 +20339,7 @@ function isValidContainer(node) {
 var ReactCurrentOwner$3 = ReactSharedInternals.ReactCurrentOwner;
 
 function getReactRootElementInContainer(container) {
+  console.log(`run function [${arguments.callee.name}]`)
   if (!container) {
     return null;
   }
@@ -20384,11 +20352,13 @@ function getReactRootElementInContainer(container) {
 }
 
 function shouldHydrateDueToLegacyHeuristic(container) {
+  console.log(`run function [${arguments.callee.name}]`)
   var rootElement = getReactRootElementInContainer(container);
   return !!(rootElement && rootElement.nodeType === ELEMENT_NODE && rootElement.hasAttribute(ROOT_ATTRIBUTE_NAME));
 }
 
 function legacyCreateRootFromDOMContainer(container, forceHydrate) {
+  console.log(`run function [${arguments.callee.name}]`)
   var shouldHydrate = forceHydrate || shouldHydrateDueToLegacyHeuristic(container); // First clear any existing content.
 
   if (!shouldHydrate) {
@@ -20451,7 +20421,7 @@ function legacyRenderSubtreeIntoContainer(parentComponent, children, container, 
 }
 
 function findDOMNode(componentOrElement) {
-
+ 
   if (componentOrElement == null) {
     return null;
   }
