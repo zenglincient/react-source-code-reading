@@ -17299,8 +17299,12 @@ function requestRetryLane(fiber) {
   return findRetryLane(currentEventWipLanes);
 }
 
+// 调度更新
 function scheduleUpdateOnFiber(fiber, lane, eventTime) {
+  console.log(`run function [${arguments.callee.name}]`)
   checkForNestedUpdates();
+  
+  // 会从当前 fiber 开始往上找到 HostRootFiber，然后从 HostRootFiber 开始更新。
   var root = markUpdateLaneFromFiberToRoot(fiber, lane);
 
   if (root === null) {
@@ -20052,8 +20056,10 @@ function findHostInstance(component) {
 function createContainer(containerInfo, tag, hydrate, hydrationCallbacks) {
   return createFiberRoot(containerInfo, tag, hydrate);
 }
-function updateContainer(element, container, parentComponent, callback) {
 
+
+function updateContainer(element, container, parentComponent, callback) {
+  console.log(`run function [${arguments.callee.name}]`)
   var current = container.current;
   var eventTime = requestEventTime();
 
@@ -20280,6 +20286,7 @@ ReactDOMRoot.prototype.unmount = ReactDOMBlockingRoot.prototype.unmount = functi
 };
 
 function createRootImpl(container, tag, options) {
+  debugger
   console.log(`run function [${arguments.callee.name}]`)
   // Tag is either LegacyRoot or Concurrent Root
   var hydrate = options != null && options.hydrate === true;
@@ -20291,6 +20298,7 @@ function createRootImpl(container, tag, options) {
 
   {
     var rootContainerElement = container.nodeType === COMMENT_NODE ? container.parentNode : container;
+    //  在根容器上注册所有⽀持的事件监听器，合成事件的⼊⼝ 
     listenToAllSupportedEvents(rootContainerElement);
   }
 
