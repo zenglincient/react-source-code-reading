@@ -7,11 +7,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-'use strict';
+
 
 if (process.env.NODE_ENV !== "production") {
   (function() {
-'use strict';
+
 
 /***************** debugger packages/scheduler/src/SchedulerFeatureFlags.js == start *****************/
 var enableSchedulerDebugging = false;
@@ -24,6 +24,7 @@ var requestHostTimeout;
 var cancelHostTimeout;
 var requestPaint;
 var hasPerformanceNow = typeof performance === 'object' && typeof performance.now === 'function';
+
 
 if (hasPerformanceNow) {
   var localPerformance = performance;
