@@ -23,9 +23,11 @@ var requestHostCallback;
 var requestHostTimeout;
 var cancelHostTimeout;
 var requestPaint;
+
+// 浏览器的 performance API
 var hasPerformanceNow = typeof performance === 'object' && typeof performance.now === 'function';
 
-
+// 暴露获取使用时间的兼容接口
 if (hasPerformanceNow) {
   var localPerformance = performance;
 
@@ -112,7 +114,7 @@ typeof MessageChannel !== 'function') {
     }
   }
 
-  var isMessageLoopRunning = false;
+  var isMessageLoopRunning = false; // 是否在运行
   var scheduledHostCallback = null;
   var taskTimeoutID = -1; // Scheduler periodically yields in case there is other work on the main
   // thread, like user events. By default, it yields multiple times per frame.
@@ -133,6 +135,8 @@ typeof MessageChannel !== 'function') {
     requestPaint = function () {};
   }
 
+  // 根据刷新率设置 yieldInterval 间隔时间
+  // 但是fps < 0 || fps > 125 时不可以调整
   exports.unstable_forceFrameRate = function (fps) {
     if (fps < 0 || fps > 125) {
       // Using console['error'] to evade Babel and ESLint
@@ -148,6 +152,7 @@ typeof MessageChannel !== 'function') {
     }
   };
 
+  // 履行任务直到截止时间
   var performWorkUntilDeadline = function () {
     if (scheduledHostCallback !== null) {
       var currentTime = exports.unstable_now(); // Yield after `yieldInterval` ms, regardless of where we are in the vsync
@@ -165,7 +170,8 @@ typeof MessageChannel !== 'function') {
           scheduledHostCallback = null;
         } else {
           // If there's more work, schedule the next message event at the end
-          // of the preceding one.
+          // of the preceding one. 
+          // 这里是启用下一个任务
           port.postMessage(null);
         }
       } catch (error) {
@@ -181,7 +187,7 @@ typeof MessageChannel !== 'function') {
 
   var channel = new MessageChannel();
   var port = channel.port2;
-  channel.port1.onmessage = performWorkUntilDeadline;
+  channel.port1.onmessage = performWorkUntilDeadline; // 将收到消息作为触发任务的起点，递归使用（并且是宏任务）
 
   requestHostCallback = function (callback) {
     scheduledHostCallback = callback;
@@ -212,10 +218,14 @@ function push(heap, node) {
   heap.push(node);
   siftUp(heap, node, index);
 }
+
+// 获取第一个
 function peek(heap) {
   var first = heap[0];
   return first === undefined ? null : first;
 }
+
+
 function pop(heap) {
   var first = heap[0];
 
@@ -233,11 +243,13 @@ function pop(heap) {
   }
 }
 
+// 二分插入队列上面
 function siftUp(heap, node, i) {
   var index = i;
 
+  // 二分插入队列下面
   while (true) {
-    var parentIndex = index - 1 >>> 1;
+    var parentIndex = index - 1 >>> 1; // 二进制进一位，就是等于除以2并向下取整
     var parent = heap[parentIndex];
 
     if (parent !== undefined && compare(parent, node) > 0) {
@@ -252,6 +264,7 @@ function siftUp(heap, node, i) {
   }
 }
 
+// 二分插入队列上下面
 function siftDown(heap, node, i) {
   var index = i;
   var length = heap.length;
@@ -262,6 +275,7 @@ function siftDown(heap, node, i) {
     var rightIndex = leftIndex + 1;
     var right = heap[rightIndex]; // If the left or right node is smaller, swap with the smaller of those.
 
+    // 看起来是个冒泡一样的排序，但是只有一个元素插入，而且是有序列表，所以只有O(n)
     if (left !== undefined && compare(left, node) < 0) {
       if (right !== undefined && compare(right, left) < 0) {
         heap[index] = right;
@@ -292,6 +306,7 @@ function compare(a, b) {
 
 /***************** debugger packages/scheduler/src/SchedulerPriorities.js == start *****************/
 // TODO: Use symbols?
+// 定义任务的优先级
 var NoPriority = 0;
 var ImmediatePriority = 1;
 var UserBlockingPriority = 2;
@@ -434,6 +449,7 @@ function markTaskRun(task, ms) {
     }
   }
 }
+// 任务让出
 function markTaskYield(task, ms) {
   {
     profilingState[PRIORITY] = NoPriority;
@@ -445,6 +461,8 @@ function markTaskYield(task, ms) {
     }
   }
 }
+
+// 暂缓
 function markSchedulerSuspended(ms) {
   {
     mainThreadIdCounter++;
@@ -488,6 +506,7 @@ var isPerformingWork = false;
 var isHostCallbackScheduled = false;
 var isHostTimeoutScheduled = false;
 
+// 重新排列时间队列
 function advanceTimers(currentTime) {
   // Check for tasks that are no longer delayed and add them to the queue.
   var timer = peek(timerQueue);
@@ -580,6 +599,7 @@ function flushWork(hasTimeRemaining, initialTime) {
   }
 }
 
+// 开始工作循环
 function workLoop(hasTimeRemaining, initialTime) {
   var currentTime = initialTime;
   advanceTimers(currentTime);
