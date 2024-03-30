@@ -7,7 +7,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-'use strict';
+
 
 if (process.env.NODE_ENV !== "production") {
   module.exports = function $$$reconciler($$$hostConfig) {
@@ -84,6 +84,18 @@ function set(key, value) {
 // Please consider also adding to 'react-devtools-shared/src/backend/ReactSymbols'
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
+// 这段代码定义了一系列常量，这些常量对应了 React 应用中使用的不同元素类型。这些常量是通过使用 Bit 操作符对数字进行特殊编码生成的。
+
+// 在 React 应用中，元素类型是表示组件类型的一种方式，不同的元素类型有不同的含义和用途。例如，REACT_ELEMENT_TYPE 表示 React 元素的默认类型，REACT_FRAGMENT_TYPE 表示 React 片段元素的类型，REACT_PORTAL_TYPE 表示 React 传送门的类型，REACT_PROVIDER_TYPE 表示 React 上下文提供者的类型，等等。
+
+// 这些常量在 React 应用的各个模块中广泛使用，例如在组件的创建、渲染、更新等过程中都会用到这些常量。由于这些常量是通过数字编码生成的，因此它们的使用可以提高性能和减小代码体积。
+
+// 当 JavaScript 代码被执行时，大多数现代 JavaScript 引擎都会使用 JIT（即时编译）技术来提高性能。JIT 可以将解释执行的 JavaScript 代码转换为本地机器码，从而提高代码的执行速度。JIT 在实现时通常会使用各种技术来优化代码，其中就包括对位运算的优化。
+
+// 使用位运算来处理常量可以利用 JavaScript 引擎的 JIT 技术进行优化。因为位运算是一种低级别的运算，通常比其他运算（如字符串或对象比较）更快。因此，使用位运算来处理常量可以让 JavaScript 引擎更加容易对代码进行优化，从而提高执行速度。
+
+// 此外，由于位运算的结果通常是一个整数，因此在 JavaScript 引擎中使用整数类型来存储常量也可以提高代码的性能。JavaScript 引擎通常可以更有效地处理整数类型的数据，从而提高执行速度。因此，使用位运算来编码常量可以让 JavaScript 引擎更加容易地进行整数优化，从而提高代码的性能。
+
 var REACT_ELEMENT_TYPE = 0xeac7;
 var REACT_PORTAL_TYPE = 0xeaca;
 var REACT_FRAGMENT_TYPE = 0xeacb;
@@ -105,6 +117,10 @@ var REACT_DEBUG_TRACING_MODE_TYPE = 0xeae1;
 var REACT_OFFSCREEN_TYPE = 0xeae2;
 var REACT_LEGACY_HIDDEN_TYPE = 0xeae3;
 
+// 这段代码用于为 React 内部定义的一些类型分配唯一的 Symbol 值。Symbol 是 ES6 中新增的一种数据类型，表示独一无二的值。在这里，React 使用 Symbol 来表示不同的类型，比如组件、Fragment、Context 等等。
+
+// 这段代码的作用是，首先判断当前环境是否支持 Symbol，如果支持则使用 Symbol.for 方法来创建或获取一个唯一的 Symbol 值，然后将这些值赋值给对应的常量，如 REACT_ELEMENT_TYPE、REACT_PORTAL_TYPE 等等。这样做的好处是，这些常量的值是独一无二的，不同类型之间不会出现冲突，方便 React 内部进行类型判断和处理。
+// Symbol.for 函数是 ES6 中新增的一个静态方法，用于创建或获取一个已存在的全局 Symbol 值。该方法接受一个字符串作为参数，表示 Symbol 值的描述符，如果传入的字符串已经存在，则返回对应的 Symbol 值，否则创建一个新的 Symbol 值并返回。
 if (typeof Symbol === 'function' && Symbol.for) {
   var symbolFor = Symbol.for;
   REACT_ELEMENT_TYPE = symbolFor('react.element');
@@ -147,6 +163,11 @@ function getIteratorFn(maybeIterable) {
 /***************** debugger packages/shared/ReactSymbols.js == end *****************/
 
 /***************** debugger packages/shared/getComponentName.js == start *****************/
+// 段代码是定义了一个函数 getComponentName，用于获取 React 元素的名称（即组件名称或 HTML 标签名称）。
+
+// 在 React 中，元素的类型可以是一个字符串（如 'div'、'span' 等），也可以是一个函数（组件）。但是函数类型元素的名称有可能是未定义的，比如匿名函数、没有定义 displayName 属性的函数等。在这种情况下，React 会使用函数名称（name 属性）作为元素名称。如果函数名称也不存在，那么元素名称就是 null。
+
+// getComponentName 函数的作用就是根据传入的元素类型，返回该元素的名称。对于函数类型元素，优先使用 displayName 属性，如果没有就使用 name 属性，如果都没有就返回 null。对于其他类型的元素，根据元素类型返回对应的名称。
 
 function getWrappedName(outerType, innerType, wrapperName) {
   var functionName = innerType.displayName || innerType.name || '';
@@ -231,63 +252,67 @@ function getComponentName(type) {
 
 /***************** debugger packages/react-reconciler/src/ReactFiberFlags.js == start *****************/
 // Don't change these two values. They're used by React Dev Tools.
+// 这些常量定义在 React Fiber 中的 ReactFiberFlags.js 文件中，作用是表示不同的 Fiber 节点状态和行为，它们会在 React 的核心算法中被用于标记不同的更新类型、标记不同的工作状态等，以便 React 在更新过程中进行优化，从而提高 React 应用的性能。
+// 这些常量可以组合使用，例如 PlacementAndUpdate 表示需要在父节点插入一个新的子节点并且需要更新当前节点的 props 和 state。常量的值也有一些特殊的含义，例如 LifecycleEffectMask 表示需要执行 React 生命周期相关的副作用，HostEffectMask 表示需要执行所有与宿主环境相关的副作用。
+// 这段代码定义了一些常量，它们被用来描述 React Fiber 树上的各种标志和状态，以便在协调过程中进行跟踪和控制。具体来说，这些标志和状态包括：
+
 var NoFlags =
-/*                      */
+/*        表示没有任何标志和状态              */
 0;
 var PerformedWork =
-/*                */
+/*        表示已经执行了一些工作。        */
 1; // You can change the rest (and add more).
 
 var Placement =
-/*                    */
+/*        表示正在执行插入操作            */
 2;
 var Update =
-/*                       */
+/*       表示正在执行更新操作                */
 4;
 var PlacementAndUpdate =
-/*           */
+/*      表示正在执行插入和更新操作     */
 6;
 var Deletion =
-/*                     */
+/*        表示正在执行删除操作             */
 8;
 var ContentReset =
-/*                 */
+/*      表示正在执行重置内容操作           */
 16;
 var Callback =
-/*                     */
+/*      示需要执行回调               */
 32;
 var DidCapture =
-/*                   */
+/*       表示已经捕获到一个错误            */
 64;
 var Ref =
-/*                          */
+/*     表示需要执行 Ref 回调                     */
 128;
 var Snapshot =
-/*                     */
+/*      表示正在执行 getSnapshotBeforeUpdate 生命周期方法               */
 256;
 var Passive =
-/*                      */
+/*       表示正在执行 passsive effect               */
 512; // TODO (effects) Remove this bit once the new reconciler is synced to the old.
 var Hydrating =
-/*                    */
+/*     表示正在执行流式数据填充操作               */
 1024;
 var HydratingAndUpdate =
-/*           */
+/*     表示正在执行流式数据填充和更新操作      */
 1028; // Passive & Update & Callback & Ref & Snapshot
 
 var LifecycleEffectMask =
-/*          */
+/*     表示需要执行的所有生命周期方法的组合标志     */
 932; // Union of all host effects
 
 var HostEffectMask =
-/*               */
+/*      表示所有 Host 组件可能需要的所有标志的组合         */
 2047; // These are not really side effects, but we still reuse this field.
 
 var Incomplete =
-/*                   */
+/*      表示当前协调阶段没有完成             */
 2048;
 var ShouldCapture =
-/*                */
+/*      表示需要捕获到一个错误。          */
 4096;
 var ForceUpdateForLegacySuspense =
 /* */
@@ -305,6 +330,7 @@ var enableNewReconciler = false; // Errors that are thrown while unmounting (or 
 /***************** debugger packages/shared/ReactFeatureFlags.js == end *****************/
 
 /***************** debugger packages/react-reconciler/src/ReactFiberTreeReflection.js == start *****************/
+// 这段代码是 React 框架中用来判断组件是否已经被挂载到页面中的工具函数。具体实现是通过遍历组件的 Fiber 树（一种数据结构，用于表示组件的状态和关系）找到最近的已经挂载的 Fiber 节点，然后判断这个 Fiber 节点是否是当前组件的 Fiber 节点，来确定组件是否已经挂载。如果组件没有挂载，返回 null。函数还有一些额外的逻辑来处理特殊情况，比如当组件被 unmount 时的情况。
 var ReactCurrentOwner = ReactSharedInternals.ReactCurrentOwner;
 function getNearestMountedFiber(fiber) {
   var node = fiber;
@@ -569,10 +595,6 @@ function findCurrentHostFiber(parent) {
     node.sibling.return = node.return;
     node = node.sibling;
   } // Flow needs the return null here, but ESLint complains about it.
-  // eslint-disable-next-line no-unreachable
-
-
-  return null;
 }
 function findCurrentHostFiberWithNoPortals(parent) {
   var currentParent = findCurrentFiberUsingSlowPath(parent);
@@ -608,10 +630,6 @@ function findCurrentHostFiberWithNoPortals(parent) {
     node.sibling.return = node.return;
     node = node.sibling;
   } // Flow needs the return null here, but ESLint complains about it.
-  // eslint-disable-next-line no-unreachable
-
-
-  return null;
 }
 function doesFiberContain(parentFiber, childFiber) {
   var node = childFiber;
@@ -9531,46 +9549,6 @@ function logCapturedError(boundary, errorInfo) {
     var error = errorInfo.value;
 
     if (false) {
-      var source = errorInfo.source;
-      var stack = errorInfo.stack;
-      var componentStack = stack !== null ? stack : ''; // Browsers support silencing uncaught errors by calling
-      // `preventDefault()` in window `error` handler.
-      // We record this information as an expando on the error.
-
-      if (error != null && error._suppressLogging) {
-        if (boundary.tag === ClassComponent) {
-          // The error is recoverable and was silenced.
-          // Ignore it and don't print the stack addendum.
-          // This is handy for testing error boundaries without noise.
-          return;
-        } // The error is fatal. Since the silencing might have
-        // been accidental, we'll surface it anyway.
-        // However, the browser would have silenced the original error
-        // so we'll print it first, and then print the stack addendum.
-
-
-        console['error'](error); // Don't transform to our wrapper
-        // For a more detailed description of this block, see:
-        // https://github.com/facebook/react/pull/13384
-      }
-
-      var componentName = source ? getComponentName(source.type) : null;
-      var componentNameMessage = componentName ? "The above error occurred in the <" + componentName + "> component:" : 'The above error occurred in one of your React components:';
-      var errorBoundaryMessage;
-      var errorBoundaryName = getComponentName(boundary.type);
-
-      if (errorBoundaryName) {
-        errorBoundaryMessage = "React will try to recreate this component tree from scratch " + ("using the error boundary you provided, " + errorBoundaryName + ".");
-      } else {
-        errorBoundaryMessage = 'Consider adding an error boundary to your tree to customize error handling behavior.\n' + 'Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.';
-      }
-
-      var combinedMessage = componentNameMessage + "\n" + componentStack + "\n\n" + ("" + errorBoundaryMessage); // In development, we provide our own message with just the component stack.
-      // We don't include the original error message and JS stack because the browser
-      // has already printed it. Even if the application swallows the error, it is still
-      // displayed by the browser thanks to the DEV-only fake event trick in ReactErrorUtils.
-
-      console['error'](combinedMessage); // Don't transform to our wrapper
     } else {
       // In production, we print the error directly.
       // This will include the message, the JS stack, and anything the browser wants to show.

@@ -554,6 +554,7 @@ function handleTimeout(currentTime) {
 
 function flushWork(hasTimeRemaining, initialTime) {
   {
+    // 标记非暂停
     markSchedulerUnsuspended(initialTime);
   } // We'll need a host callback the next time work is scheduled.
 
