@@ -186,6 +186,257 @@ shared
 
 
 
+## 当前环境变量（Dispatcher, BatchConfig, Owner, Act） 共享内部变量（ReactSharedInternals）
+在 React 源码中，当前环境变量和共享内部变量扮演了至关重要的角色，它们确保了 React 的不同部分能够高效且一致地协作。以下是对这些变量的作用和使用场景的详细解释：
+
+### 当前环境变量
+
+#### Dispatcher
+- **作用**: Dispatcher 用于存储当前渲染或更新环境下的 Hooks 方法。这包括了 `useState`, `useEffect`, `useContext` 等 Hooks。
+- **使用场景**: 在函数组件的执行过程中，Dispatcher 会根据组件的执行阶段（如渲染阶段或提交阶段）指向不同的实现，以确保 Hooks 能够正确地工作。
+
+#### BatchConfig
+- **作用**: `BatchConfig` 用于存储批处理的配置信息，如当前是否处于批更新模式。
+- **使用场景**: 在事件处理或异步任务中，React 可以将多个 `setState` 调用合并为一个批处理，以减少不必要的重渲染。`BatchConfig` 用于控制这一行为。
+
+#### Owner 和 Act
+- **Owner**: 用于追踪当前正在渲染的组件的所有者，主要用于调试和错误处理中。
+- **Act**: `Act` 用于测试，它帮助确保在测试中对组件的更新有正确的预期。
+- **使用场景**: `Owner` 在开发者工具中特别有用，它可以帮助开发者理解组件树的结构。而 `Act` 主要在单元测试中使用，以确保组件的行为与预期一致。
+
+### 共享内部变量（ReactSharedInternals）
+
+- **作用**: `ReactSharedInternals` 是一个对象，它包含了 React 的内部变量，这些变量需要在 React 的不同模块和包之间共享。最重要的共享变量是 `ReactCurrentDispatcher` 和其他当前环境变量。
+- **使用场景**: React 的不同包（如 `react` 和 `react-dom`）需要访问和使用同一套内部逻辑和状态。通过 `ReactSharedInternals`，这些包可以访问到 Dispatcher、BatchConfig 等内部变量，从而保持行为的一致性。例如，`react-dom` 在处理事件和调度更新时，需要使用到 `BatchConfig` 来合并多个 `setState` 调用。
+
+总结来说，当前环境变量和共享内部变量为 React 提供了一种机制，以维护和管理跨不同组件和模块的内部状态和配置。这些机制确保了 React 应用的性能和一致性，是 React 内部实现的关键部分。
+
+## ReactNoopUpdateQueue 是什么
+这段代码定义了 `ReactNoopUpdateQueue`，一个 React 内部使用的更新队列的“空操作（noop）”版本。这个队列提供了一组方法，这些方法在其默认形态下不执行任何操作。主要用于组件在未被挂载或与具体渲染器（如 `react-dom`）脱离时的行为。下面详细介绍这个更新队列的作用以及开发者可能遇到的应用场景：
+
+### 作用
+
+- **`isMounted`**: 检查一个组件是否已经挂载到 DOM 上。这个方法在 `ReactNoopUpdateQueue` 中总是返回 `false`，因为它是一个空操作的实现。实际的逻辑应由渲染器（如 `react-dom`）提供。
+- **`enqueueForceUpdate`**: 强制更新组件。这个方法在 `ReactNoopUpdateQueue` 中不做任何事情，但在真实的更新队列实现中，它会触发组件的强制更新，即使 `shouldComponentUpdate` 返回 `false`。
+- **`enqueueReplaceState`**: 替换组件的状态。这个方法在 `ReactNoopUpdateQueue` 中也是空操作。在实际的队列中，它允许直接设置组件的新状态，而不是合并。
+- **`enqueueSetState`**: 设置组件的状态的子集。与 `enqueueReplaceState` 类似，这在 `ReactNoopUpdateQueue` 中不执行任何操作，但在真实的更新队列中，它用于触发状态的更新和组件的重渲染。
+
+### 应用场景
+
+- **开发阶段**: `ReactNoopUpdateQueue` 主要在开发阶段作为占位符使用，以防止在组件未完全挂载或初始化时调用状态更新方法导致的错误。
+- **单元测试**: 在单元测试中，当测试组件的行为而不依赖于特定的渲染器时（如不使用 `react-dom` 或 `react-native`），`ReactNoopUpdateQueue` 可以用来避免执行实际的状态更新逻辑。
+- **服务器端渲染（SSR）**: 在服务器端渲染场景中，由于组件不会真正挂载到 DOM 上，`ReactNoopUpdateQueue` 可能被用来替代实际的更新队列，尽管 SSR 通常有其专用的处理逻辑。
+
+总结来说，`ReactNoopUpdateQueue` 在 React 的架构中起到了一个重要的角色，它作为一个默认的、空操作的更新队列实现，确保了在没有具体渲染器提供实际逻辑时，组件和库的其他部分仍然能够正常协同工作。
 
 
+## ReactBaseClasses 段代码
+`ReactBaseClasses.js` 文件定义了 React 组件的两个基础类：`Component` 和 `PureComponent`。这些类提供了组件的核心功能，如状态管理、生命周期处理等。以下是对这些类及其方法的详细解释和应用场景：
 
+### `Component`
+
+#### 定义
+- `Component` 类是所有类组件的基类。它提供了设置组件状态、强制更新组件等基本功能。
+
+#### 属性
+- **`this.props`**: 组件接收的属性。
+- **`this.context`**: 如果使用了旧版的 Context API，则通过它可以访问上下文。
+- **`this.refs`**: 存储对 DOM 节点或子组件的引用。
+- **`this.updater`**: 一个内部对象，用于排队更新组件的状态。默认情况下，它使用 `ReactNoopUpdateQueue`，但在组件挂载到具体渲染器（如 `react-dom`）时，会被注入一个真实的更新队列。
+
+#### 方法
+- **`setState(partialState, callback)`**: 用于更新组件的状态。它接受一个对象或一个返回对象的函数作为新的部分状态，以及一个可选的回调函数，该函数在更新完成后执行。
+- **`forceUpdate(callback)`**: 强制组件重新渲染，跳过 `shouldComponentUpdate`。这可以用于在知道深层数据变化但未通过 `setState` 更新时强制渲染。
+
+### `PureComponent`
+
+#### 定义
+- `PureComponent` 与 `Component` 类似，但它通过浅比较 `props` 和 `state` 来自动实现了 `shouldComponentUpdate`，有助于优化性能。
+
+#### 应用场景
+- **`Component` 使用场景**:
+  - 当你需要定义一个状态ful组件时，你可以通过继承 `Component` 类并使用其生命周期方法和 `setState` 来管理状态。
+  - 如果组件需要通过引用直接访问 DOM 元素或子组件，可以使用 `this.refs`。
+  - 当组件的某部分状态在外部变化且无法触发重新渲染时，可以使用 `forceUpdate` 来强制渲染。
+  
+- **`PureComponent` 使用场景**:
+  - 当组件的渲染输出仅依赖于 `props` 和 `state` 且不需要深层比较时，使用 `PureComponent` 可以减少不必要的渲染，提高性能。
+  - `PureComponent` 适用于简单的组件或组件树的叶节点，其中对性能要求较高且 `props` 和 `state` 结构较为简单。
+
+总结来说，`ReactBaseClasses.js` 提供了构建 React 类组件的基础。通过继承 `Component` 或 `PureComponent`，开发者可以根据具体需求选择合适的基类来创建组件，管理状态，并通过生命周期方法控制组件的渲染行为。
+
+## creatRef 代码出乎意料的简单
+```js
+function createRef() {
+  var refObject = {
+    current: null
+  };
+
+  return refObject;
+}
+```
+在 React 中，当你使用 `ref` 属性并将其设置为通过 `React.createRef()` 创建的 `ref` 对象时，React 会自动将对应的 DOM 元素或组件实例赋值给这个 `ref` 对象的 `current` 属性。这个过程主要发生在组件的挂载（mounting）和更新（updating）阶段。以下是该过程的概述和工作原理：
+
+### 工作原理
+
+1. **创建 Ref**: 通过调用 `React.createRef()`，你创建了一个包含 `current` 属性且初始值为 `null` 的对象。
+
+    ```jsx
+    this.myInput = React.createRef();
+    ```
+
+2. **附加 Ref**: 在 JSX 中，你将这个 `ref` 对象通过 `ref` 属性附加到某个元素上。React 支持将 `ref` 附加到 DOM 元素或类组件实例上。
+
+    ```jsx
+    <input type="text" ref={this.myInput} />
+    ```
+
+3. **赋值过程**: 在组件的挂载或更新阶段，React 会处理 JSX 并识别出含有 `ref` 属性的元素。React 接着将对应的 DOM 元素或组件实例赋值给 `ref` 对象的 `current` 属性。
+
+    - 如果 `ref` 被附加到了 DOM 元素上，`current` 属性将指向这个 DOM 元素。
+    - 如果 `ref` 被附加到了类组件上，`current` 属性将指向这个组件的实例。
+
+4. **访问 Ref**: 一旦 `ref` 的 `current` 属性被赋值，你就可以在组件的任何生命周期方法（如 `componentDidMount` 或 `componentDidUpdate`）中访问这个属性，以操作 DOM 元素或组件实例。
+
+    ```jsx
+    componentDidMount() {
+        this.myInput.current.focus();
+    }
+    ```
+
+### 实现细节
+
+- React 内部通过特殊处理 `ref` 属性来实现这个功能。当渲染过程中遇到 `ref` 属性，React 会在适当的时机（即 DOM 元素或组件实例已经准备好时）将其赋值给 `current`。
+- 对于函数组件，由于它们没有实例，不能直接使用 `createRef()` 赋予 `ref`。但你可以使用 `useRef` Hook 或回调形式的 `ref` 来达到相似的效果。
+
+### 结论
+
+通过将 `ref` 对象赋予元素的 `ref` 属性，React 能够自动地把对应的 DOM 元素或类组件实例赋值给 `ref` 对象的 `current` 属性。这个机制使得直接操作 DOM 元素或访问组件实例变得既简单又安全。
+
+# ReactElement.js  部分
+
+## 概述这部分代码
+
+`ReactElement.js` 源码文件中定义了 React 元素的创建和处理逻辑。React 元素是 React 应用中最基础的构建块，表示 UI 的各个部分。以下是对这个文件中关键部分的详细解释：
+
+### React 元素的创建
+- **`ReactElement`** 函数是用来创建一个新的 React 元素的工厂方法。它接收元素的类型（如 `div`、`span` 或任何自定义的组件）、`key`、`ref`、`props` 等属性，并返回一个 React 元素对象。
+
+### `createElement` 方法
+- **`createElement`** 是创建 React 元素的主要方法。它被开发者在编写 JSX 时广泛使用，JSX 代码在编译过程中会被转换成对 `createElement` 方法的调用。
+- 它接收一个元素类型、一个配置对象（包括 `key`、`ref` 和其他属性）、以及任意数量的子元素。该方法处理这些参数，创建并返回一个新的 React 元素。
+
+### `createFactory` 方法
+- **`createFactory`** 是一个辅助方法，用于创建一个返回特定类型 React 元素的工厂函数。这在函数式编程模式中有时会很有用，但在现代 React 开发中很少使用。
+
+### `cloneElement` 方法
+- **`cloneElement`** 方法用于克隆并返回一个新的 React 元素，它基于传入的元素（`element`），并允许传入新的配置对象（`config`）和子元素（`children`）来覆盖原有的属性和子元素。
+
+### `isValidElement` 方法
+- **`isValidElement`** 方法用于检查一个对象是否是 React 元素。它通过检查对象的 `$$typeof` 属性是否等于 `REACT_ELEMENT_TYPE` 来确定。
+
+### 关键属性
+- **`$$typeof`**: 用于唯一标识一个对象是 React 元素。
+- **`type`**: 元素的类型，可以是字符串（对于 DOM 元素），也可以是函数或类（对于组件）。
+- **`key`**: 用于在列表中唯一标识元素，帮助 React 进行高效的更新。
+- **`ref`**: 用于获取元素的引用。
+- **`props`**: 包含元素的所有属性和子元素的对象。
+
+### 使用场景
+- 开发者在编写 JSX 时，实际上是在使用 `createElement` 方法。例如，`<div>` 在 JSX 中的写法在编译后会变成 `React.createElement('div')`。
+- 当需要基于现有元素创建新元素，但又想修改一些属性或添加新的子元素时，可以使用 `cloneElement` 方法。
+- 通过 `isValidElement` 方法，可以验证某个对象是否是有效的 React 元素，这在一些高阶组件或工具函数中很有用。
+
+总的来说，`ReactElement.js` 文件中定义的方法和逻辑是 React 库构建和处理 UI 的基础。通过这些方法，React 能够管理虚拟 DOM，从而高效地更新浏览器中的实际 DOM。
+
+## CreateElement 与 reactElement的关系
+### `ReactElement`
+
+`ReactElement` 是一个工厂函数，它负责生成一个描述 React 组件或 DOM 节点的轻量级对象——即 React 元素。这个对象包含了组件类型（`type`）、属性（`props`）、键（`key`）、引用（`ref`）等关键信息，这些信息将被 React 用来构建和管理虚拟 DOM。
+
+```javascript
+var ReactElement = function (type, key, ref, self, source, owner, props) {
+  var element = {
+    $$typeof: REACT_ELEMENT_TYPE,
+    type: type,
+    key: key,
+    ref: ref,
+    props: props,
+    _owner: owner
+  };
+  return element;
+};
+```
+
+## createElement
+createElement 是 React 公开的 API，它提供了一种更为方便、易用的方式来创建 ReactElement。开发者在编写 JSX 时实际上是在使用 createElement 方法。JSX 语法 <div /> 在被 Babel 等编译器处理后，会被转换成 React.createElement('div') 的形式。
+```js
+function createElement(type, config, children) {
+  // 处理 config 和 children，提取 props
+  // 最终调用 ReactElement 函数
+  return ReactElement(type, key, ref, self, source, ReactCurrentOwner.current, props);
+}
+```
+`createElement` 函数在调用 `ReactElement` 生成 React 元素之前执行了一系列重要的操作来处理和准备元素的属性（props）、类型（type）、键（key）、引用（ref）等信息。以下是这些操作的详细解释：
+
+### 1. 提取并处理 `key` 和 `ref`
+
+`createElement` 首先检查配置对象（config）中是否存在 `key` 和 `ref` 属性。这两个属性在 React 中有特殊的用途：
+
+- **`key`**: 帮助 React 识别列表中哪些元素改变了（比如被添加或删除）。通过给元素分配一个稳定的标识，React 能够重新渲染列表时更高效地比较差异。
+- **`ref`**: 提供了一种方式来访问 React 元素（DOM 节点或组件实例）的引用。
+
+如果配置对象中存在 `key` 和 `ref`，`createElement` 会将它们提取出来，并在之后的操作中将它们传递给 `ReactElement` 函数。
+
+### 2. 处理 `self` 和 `source`
+
+这两个属性主要用于开发过程中的调试：
+
+- **`self`**: 指向当前的组件实例。这对于使用 `React.createElement` 调用时检测 `this` 是否与期望的实例相符很有用。
+- **`source`**: 包含有关元素创建位置的信息，如文件名和行号。这有助于在调试时定位元素。
+
+如果配置对象中存在这些属性，`createElement` 也会提取它们。
+
+### 3. 提取并合并剩余的属性到 `props`
+
+除了 `key`、`ref`、`self` 和 `source`，配置对象中的其他属性都被视为元素的 `props`。`createElement` 遍历配置对象，将这些属性合并到一个新的 `props` 对象中。这个过程中会跳过保留的属性名称。
+
+### 4. 处理子元素
+
+`createElement` 的参数不仅包括类型和配置对象，还可以接收任意数量的子元素作为后续参数。`createElement` 会检查这些子元素的数量：
+
+- 如果只有一个子元素，直接将其赋值给 `props.children`。
+- 如果有多个子元素，将它们放入一个数组中，然后赋值给 `props.children`。
+
+这确保了 `props.children` 始终以一种一致的方式被处理。
+
+### 5. 应用默认属性
+
+如果元素类型指定了 `defaultProps`，`createElement` 会将这些默认属性合并到 `props` 中。对于任何未在配置对象中指定的属性，如果存在默认值，则会使用默认值。
+
+### 6. 调用 `ReactElement`
+
+完成上述所有预处理步骤后，`createElement` 会使用收集到的 `type`、`key`、`ref`、`self`、`source`、`owner`（当前 React 组件的所有者）和准备好的 `props` 调用 `ReactElement` 函数，创建并返回一个新的 React 元素。
+
+### 结论
+
+`createElement` 函数通过执行这些操作，确保了元素的创建过程既灵活又规范。它处理各种边界情况和特殊属性，使得开发者在使用 JSX 或直接调用 `createElement` 时能够以一种直观且错误少发生的方式来声明 UI。
+
+## 其中。self 和 source 的作用 是什么
+** React.createElement 函数其实是在babel转化的时候使用的，当前端写jsx的时候，其执行其实在babel转化阶段，而不是浏览器执行阶段 **
+回答： 调试的时候用的。
+如果转化的babel插件支持的话，才会出现 __self, this给调试的时候使用。
+```jsx
+const element = React.createElement("div", { className: "hello" }, "Hello, world!");
+
+```
+```json
+{
+  "plugins": [
+    ["@babel/plugin-transform-react-jsx", {
+      "development": true,
+      "useBuiltIns": true
+    }]
+  ]
+}
+```
