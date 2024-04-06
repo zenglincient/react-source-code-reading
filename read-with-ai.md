@@ -440,3 +440,70 @@ const element = React.createElement("div", { className: "hello" }, "Hello, world
   ]
 }
 ```
+
+## 解释react children相关 的代码
+`ReactChildren.js` 是 React 源码的一部分，提供了一系列工具函数来处理 `props.children`。这些工具函数使开发者能够以不同方式遍历、转换和操作子元素集合。以下是对这段代码的详细解释：
+
+### 关键变量
+
+- **`SEPARATOR` 和 `SUBSEPARATOR`**: 用于在生成子元素的 key 时，构造复合 key。`SEPARATOR` 用作不同层级之间的分隔符，`SUBSEPARATOR` 用于同一层级内不同元素的分隔。
+
+### 关键函数
+
+#### `escape` 和 `escapeUserProvidedKey`
+
+- 这两个函数用于转义 key 中的特定字符。由于 React 使用 key 来追踪和比较元素的变化，避免在 key 中使用某些特殊字符是必要的，以确保 key 的唯一性和有效性。
+
+#### `getElementKey`
+
+- 根据元素的位置和/或开发者提供的 key 来生成一个最终的 key。如果元素有显式设置的 key，则使用转义后的该 key；如果没有，则使用元素在集合中的索引。
+
+#### `mapIntoArray`
+
+- 是一个辅助函数，用于将 `children`（可以是任意嵌套的子元素集合）递归地映射（map）到一个数组中，并为每个元素调用提供的回调函数 `callback`。它处理了多种类型的 `children`（包括 `undefined`、`boolean`、`string`、`number`、普通对象和数组），并考虑了 React 元素和门户（Portal）类型的特殊情况。
+
+### 公开的 API
+
+#### `mapChildren`
+
+- 允许开发者为 `props.children` 中的每个子元素执行一个函数，返回一个包含结果的数组。这个函数对于转换子元素集合特别有用。
+
+#### `countChildren`
+
+- 返回 `props.children` 中的子元素数量。这个函数可以用来确定传递给组件的子元素有多少个。
+
+#### `forEachChildren`
+
+- 类似于 `mapChildren`，但不返回任何结果。它仅仅遍历子元素并为每个元素执行一个函数。适用于需要对子元素执行副作用操作的场景。
+
+#### `toArray`
+
+- 将 `props.children` 转换为一个扁平的数组，保留 key。这使得处理和重排子元素变得更简单。
+
+#### `onlyChild`
+
+- 验证 `props.children` 是否只包含一个子元素，并返回它。如果包含多个子元素，会抛出错误。这个函数适用于组件只期望接收单一子元素的场景。
+
+### 使用场景示例
+
+假设你有一个组件，它接收任意数量的子元素，并希望为这些子元素添加额外的样式或包裹额外的元素：
+
+```jsx
+function MyComponent({ children }) {
+  return React.Children.map(children, child => (
+    <div className="wrapper">{child}</div>
+  ));
+}
+```
+在这个示例中，React.Children.map 被用来遍历每个子元素，并将每个子元素包裹在具有特定样式的 div 中。
+
+总结来说，ReactChildren.js 中定义的函数为处理组件子元素提供了灵活的工具，无论子元素的结构多么复杂或是数量如何，都可以有效管理
+
+
+
+# Hooks API
+在源码中可以看到，hooks只是简单的调用ReactCurrentDispatcher.current中对应的方法，那么 ReactCurrentDispatcher.current 是在哪里赋值的？ok，实际是在对应的render方法中
+### Hooks API的实现
+ReactCurrentDispatcher.current 通常在 React 的渲染流程开始时被设置。对于不同的渲染目标（例如，浏览器 DOM、React Native 等），React 使用不同的渲染器（如 ReactDOM、ReactNativeRenderer），每个渲染器都会在渲染过程的适当时机设置 ReactCurrentDispatcher.current 为一个包含了所有 Hooks 实现的对象。
+
+例如，在使用 ReactDOM.render 渲染组件时，ReactDOM 会设置 ReactCurrentDispatcher.current 以提供 useEffect 等 Hooks 的具体实现。这样，当你在组件中调用 useEffect 时，实际上是调用了 ReactDOM 提供的 useEffect 实现。
