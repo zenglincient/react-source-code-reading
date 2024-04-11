@@ -11737,18 +11737,29 @@ function resetHooksAfterThrow() {
 
 function mountWorkInProgressHook() {
   var hook = {
+    // memoizedState: 用于存储Hook的当前状态，初始为空
     memoizedState: null,
-    baseState: null,
-    baseQueue: null,
-    queue: null,
-    next: null
-  };
 
+    // baseState: 用于存储Hook的基础状态，初始为空
+    baseState: null,
+
+    // baseQueue: 用于存储更新队列，初始为空
+    baseQueue: null,
+
+    // queue: 用于存储此Hook的更新操作队列，初始为空
+    queue: null,
+
+    // next: 指向下一个Hook，用于在Fiber节点上形成Hook链表，初始为null
+    next: null,
+  };
+// 检查当前Fiber节点是否已经有Hook链表，这是链表里第一个
   if (workInProgressHook === null) {
     // This is the first hook in the list
+    // workInProgressHook也指向当前的hook，表示当前正在处理的Hook
     currentlyRenderingFiber$1.memoizedState = workInProgressHook = hook;
   } else {
-    // Append to the end of the list
+    //  如果已经有Hook链表，则将当前hook添加到链表的末尾
+    // 将workInProgressHook的next指向当前hook
     workInProgressHook = workInProgressHook.next = hook;
   }
 
@@ -12222,11 +12233,14 @@ function updateMutableSource(source, getSnapshot, subscribe) {
   return useMutableSource(hook, source, getSnapshot, subscribe);
 }
 
+
 function mountState(initialState) {
+  // 为当前Hook创建一个新的Hook对象，并将其添加到当前Fiber节点的Hooks链表中。这一步是在组件的Fiber节点上记录Hook的状态，为后续的更新提供依据。
   var hook = mountWorkInProgressHook();
 
   if (typeof initialState === 'function') {
     // $FlowFixMe: Flow doesn't like mixed types
+    // 如果是函数还是帮你执行
     initialState = initialState();
   }
 
@@ -20261,7 +20275,6 @@ function injectIntoDevTools(devToolsConfig) {
 
 // 初次渲染哦？
 function ReactDOMRoot(container, options) {
-  debugger
   console.log(`run function [${arguments.callee.name}]`)
   this._internalRoot = createRootImpl(container, ConcurrentRoot, options);
 }
@@ -20286,7 +20299,6 @@ ReactDOMRoot.prototype.unmount = ReactDOMBlockingRoot.prototype.unmount = functi
 };
 
 function createRootImpl(container, tag, options) {
-  debugger
   console.log(`run function [${arguments.callee.name}]`)
   // Tag is either LegacyRoot or Concurrent Root
   var hydrate = options != null && options.hydrate === true;

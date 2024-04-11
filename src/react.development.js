@@ -28,15 +28,19 @@ var ReactVersion = '17.0.0';
 // Please consider also adding to 'react-devtools-shared/src/backend/ReactSymbols'
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
+
+
+// 用于标记react类型，我们使用过的几个标签，居然是常量
+
 var REACT_ELEMENT_TYPE = 0xeac7;
 var REACT_PORTAL_TYPE = 0xeaca;
-exports.Fragment = 0xeacb;
-exports.StrictMode = 0xeacc;
-exports.Profiler = 0xead2;
+exports.Fragment = 0xeacb; // `Fragment` 允许你将子列表分组，而无需向 DOM 添加额外节点。这是一种组织组件的方式，不会在生成的 HTML 结构中添加额外的元素，有助于保持 DOM 结构的简洁。- **为什么是常量**: 在源码中，`Fragment` 被赋予了一个常量值（如 `0xeacb`），这样 React 内部就可以用一个独特且一致的标识符来快速识别 Fragment 类型的元素。这个常量值对于开发者来说是透明的，因为在使用 JSX 时，你会使用 `<React.Fragment>` 或 `<>`（短语法）这样的标签形式，而这背后的转换由 Babel 或其他 JSX 转译器处理。
+exports.StrictMode = 0xeacc; // 
+exports.Profiler = 0xead2; // 常量 用于收集渲染阶段的性能信息。它允许你测量应用中一部分 UI 渲染的性能，例如渲染时间和“提交”阶段的花费时间。- **为什么是常量**: `Profiler` 也是通过一个常量值（如 `0xead2`）来标识的。这使得 React 能够识别出 `<Profiler>` 组件并进行特殊处理，比如搜集性能数据。在 JSX 中，你直接使用 `<Profiler>` 标签来声明性能分析器，而其背后的常量值则是在库的内部使用的。
 var REACT_PROVIDER_TYPE = 0xeacd;
 var REACT_CONTEXT_TYPE = 0xeace;
 var REACT_FORWARD_REF_TYPE = 0xead0;
-exports.Suspense = 0xead1;
+exports.Suspense = 0xead1; // Suspense 也是常量
 exports.unstable_SuspenseList = 0xead8;
 var REACT_MEMO_TYPE = 0xead3;
 var REACT_LAZY_TYPE = 0xead4;
@@ -139,11 +143,13 @@ var IsSomeRendererActing = {
 /***************** debugger packages/react/src/IsSomeRendererActing.js == end *****************/
 
 /***************** debugger packages/react/src/ReactSharedInternals.js == start *****************/
+// 用于在 React 的不同模块间共享内部变量，如当前的 Dispatcher。
+// react 的不同包（如 `react` 和 `react-dom`）需要访问和使用同一套内部逻辑和状态。通过 `ReactSharedInternals`，这些包可以访问到 Dispatcher、BatchConfig 等内部变量，从而保持行为的一致性。例如，`react-dom` 在处理事件和调度更新时，需要使用到 `BatchConfig` 来合并多个 `setState` 调用。
 var ReactSharedInternals = {
-  ReactCurrentDispatcher: ReactCurrentDispatcher,
-  ReactCurrentBatchConfig: ReactCurrentBatchConfig,
-  ReactCurrentOwner: ReactCurrentOwner,
-  IsSomeRendererActing: IsSomeRendererActing,
+  ReactCurrentDispatcher: ReactCurrentDispatcher, // 用于存储当前渲染或更新环境下的 Hooks 方法。这包括了 `useState`, `useEffect`, `useContext` 等 Hooks。 **使用场景**: 在函数组件的执行过程中，Dispatcher 会根据组件的执行阶段（如渲染阶段或提交阶段）指向不同的实现，以确保 Hooks 能够正确地工作。
+  ReactCurrentBatchConfig: ReactCurrentBatchConfig, // **作用**: `BatchConfig` 用于存储批处理的配置信息，如当前是否处于批更新模式。 **使用场景**: 在事件处理或异步任务中，React 可以将多个 `setState` 调用合并为一个批处理，以减少不必要的重渲染。`BatchConfig` 用于控制这一行为。
+  ReactCurrentOwner: ReactCurrentOwner, // **Owner**: 好像fiber就是他 用于追踪当前正在渲染的组件的所有者，主要用于调试和错误处理中。 **使用场景**: `Owner` 在开发者工具中特别有用，它可以帮助开发者理解组件树的结构。
+  IsSomeRendererActing: IsSomeRendererActing, // 而 `Act` 主要在单元测试中使用，以确保组件的行为与预期一致。
   // Used by renderers to avoid bundling object-assign twice in UMD bundles:
   assign: _assign
 };
@@ -153,6 +159,7 @@ var ReactSharedInternals = {
 // Do not require this module directly! Use normal `invariant` calls with
 // template literal strings. The messages will be replaced with error codes
 // during build.
+// 这里是用来格式化错误的
 function formatProdErrorMessage(code) {
   var url = 'https://reactjs.org/docs/error-decoder.html?invariant=' + code;
 
@@ -169,6 +176,21 @@ function formatProdErrorMessage(code) {
  * This is the abstract API for an update queue.
  */
 
+
+// 这段代码定义了 `ReactNoopUpdateQueue`，一个 React 内部使用的更新队列的“空操作（noop）”版本。这个队列提供了一组方法，这些方法在其默认形态下不执行任何操作。主要用于组件在未被挂载或与具体渲染器（如 `react-dom`）脱离时的行为。下面详细介绍这个更新队列的作用以及开发者可能遇到的应用场景：
+
+// ### 作用
+
+// - **`isMounted`**: 检查一个组件是否已经挂载到 DOM 上。这个方法在 `ReactNoopUpdateQueue` 中总是返回 `false`，因为它是一个空操作的实现。实际的逻辑应由渲染器（如 `react-dom`）提供。
+// - **`enqueueForceUpdate`**: 强制更新组件。这个方法在 `ReactNoopUpdateQueue` 中不做任何事情，但在真实的更新队列实现中，它会触发组件的强制更新，即使 `shouldComponentUpdate` 返回 `false`。
+// - **`enqueueReplaceState`**: 替换组件的状态。这个方法在 `ReactNoopUpdateQueue` 中也是空操作。在实际的队列中，它允许直接设置组件的新状态，而不是合并。
+// - **`enqueueSetState`**: 设置组件的状态的子集。与 `enqueueReplaceState` 类似，这在 `ReactNoopUpdateQueue` 中不执行任何操作，但在真实的更新队列中，它用于触发状态的更新和组件的重渲染。
+
+// ### 应用场景
+
+// - **开发阶段**: `ReactNoopUpdateQueue` 主要在开发阶段作为占位符使用，以防止在组件未完全挂载或初始化时调用状态更新方法导致的错误。
+// - **单元测试**: 在单元测试中，当测试组件的行为而不依赖于特定的渲染器时（如不使用 `react-dom` 或 `react-native`），`ReactNoopUpdateQueue` 可以用来避免执行实际的状态更新逻辑。
+// - **服务器端渲染（SSR）**: 在服务器端渲染场景中，由于组件不会真正挂载到 DOM 上，`ReactNoopUpdateQueue` 可能被用来替代实际的更新队列，尽管 SSR 通常有其专用的处理逻辑。
 
 var ReactNoopUpdateQueue = {
   /**
@@ -239,9 +261,10 @@ var emptyObject = {};
  * Base class helpers for the updating state of a component.
  */
 
-
+// `Component` 类是所有类组件的基类。它提供了设置组件状态、强制更新组件等基本功能。
+// 这里就是react class 写法中的类的定义
 function Component(props, context, updater) {
-  this.props = props;
+  this.props = props; // props 
   this.context = context; // If a component has string refs, we will assign a different object later.
 
   this.refs = emptyObject; // We initialize the default updater but the real one gets injected by the
@@ -326,6 +349,7 @@ pureComponentPrototype.constructor = PureComponent; // Avoid an extra prototype 
 
 _assign(pureComponentPrototype, Component.prototype);
 
+// 用这个区分是不是 PureComponent ，
 pureComponentPrototype.isPureReactComponent = true;
 /***************** debugger packages/react/src/ReactBaseClasses.js == end *****************/
 
@@ -385,9 +409,14 @@ function hasValidKey(config) {
  * 将属性弄成一个json返回
  * 这个json 是虚拟dom吗？
  */
+/**
+ * 创建一个新的 React 元素。
+ * 注意，这个函数不应该使用 new 关键字来调用，因为它不遵循类的模式。
+ * 要检查一个对象是否为 React 元素，请使用 $$typeof 字段与 Symbol.for('react.element') 比较。
+ */
 var ReactElement = function (type, key, ref, self, source, owner, props) {
   var element = {
-    // This tag allows us to uniquely identify this as a React Element
+    // 标记这个对象为一个 React 元素
     $$typeof: REACT_ELEMENT_TYPE,
     // Built-in properties that belong on the element
     type: type,
@@ -412,7 +441,12 @@ var ReactElement = function (type, key, ref, self, source, owner, props) {
  * @param {*} children 子元素
  * @returns 
  */
+// 很遗憾这里不会在jsx转化的时候被前端调用，而是在babel转化的时候调用的
+// 通常我们不直接使用 createElement 而是写jsx
 function createElement(type, config, children) {
+ // 
+ //  console.log('此处调用了 createElement', type, config, children)
+
   var propName; // Reserved names are extracted
 
   var props = {};
@@ -430,6 +464,7 @@ function createElement(type, config, children) {
       key = '' + config.key;
     }
 
+    // 调试用的，某些babel插件会
     self = config.__self === undefined ? null : config.__self;
     source = config.__source === undefined ? null : config.__source; // Remaining properties are added to a new props object
 
@@ -580,8 +615,9 @@ function isValidElement(object) {
 /***************** debugger packages/react/src/ReactElement.js == end *****************/
 
 /***************** debugger packages/react/src/ReactChildren.js == start *****************/
-var SEPARATOR = '.';
-var SUBSEPARATOR = ':';
+//  用于在生成子元素的 key 时，构造复合 key。
+var SEPARATOR = '.'; // 用作不同层级之间的分隔符
+var SUBSEPARATOR = ':'; // `SUBSEPARATOR` 用于同一层级内不同元素的分隔。
 /**
  * Escape and wrap key so it is safe to use as a reactid
  *
@@ -589,6 +625,7 @@ var SUBSEPARATOR = ':';
  * @return {string} the escaped key.
  */
 
+// 用于字符转译的
 function escape(key) {
   var escapeRegex = /[=:]/g;
   var escaperLookup = {
@@ -614,6 +651,7 @@ function escapeUserProvidedKey(text) {
  */
 
 
+// 根据元素的位置和/或开发者提供的 key 来生成一个最终的 key。如果元素有显式设置的 key，则使用转义后的该 key；如果没有，则使用元素在集合中的索引。
 function getElementKey(element, index) {
   // Do some typechecking here since we call this blindly. We want to ensure
   // that we don't block potential future ES APIs.
@@ -830,6 +868,7 @@ function onlyChild(children) {
 /***************** debugger packages/react/src/ReactChildren.js == end *****************/
 
 /***************** debugger packages/react/src/ReactContext.js == start *****************/
+// calculateChangedBits 可以接受一个函数，当返回true的时候会触发重新渲染，用于性能优化
 function createContext(defaultValue, calculateChangedBits) {
   if (calculateChangedBits === undefined) {
     calculateChangedBits = null;
@@ -874,6 +913,8 @@ var Rejected = 2;
 function lazyInitializer(payload) {
   if (payload._status === Uninitialized) {
     var ctor = payload._result;
+
+    // 执行后的promise函数
     var thenable = ctor(); // Transition to the next state.
 
     var pending = payload;
@@ -1011,6 +1052,7 @@ function useContext(Context, unstable_observedBits) {
   return dispatcher.useContext(Context, unstable_observedBits);
 }
 function useState(initialState) {
+  debugger
   var dispatcher = resolveDispatcher();
   return dispatcher.useState(initialState);
 }
