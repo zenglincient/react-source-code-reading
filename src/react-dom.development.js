@@ -10073,6 +10073,7 @@ function coerceRef(returnFiber, current, element) {
   if (mixedRef !== null && typeof mixedRef !== 'function' && typeof mixedRef !== 'object') {
 
     if (element._owner) {
+      // owner 似乎就是fiber节点
       var owner = element._owner;
       var inst;
 
@@ -10165,6 +10166,8 @@ function resolveLazyType(lazyComponent) {
 
 
 function ChildReconciler(shouldTrackSideEffects) {
+  // 该函数用于删除单个子节点
+  
   function deleteChild(returnFiber, childToDelete) {
     if (!shouldTrackSideEffects) {
       // Noop.
@@ -10188,7 +10191,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     childToDelete.nextEffect = null;
     childToDelete.flags = Deletion;
   }
-
+  // 删除后面的
   function deleteRemainingChildren(returnFiber, currentFirstChild) {
     if (!shouldTrackSideEffects) {
       // Noop.
@@ -10645,6 +10648,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return resultingFirstChild;
   }
 
+  // ！！！！！这里就是面试常问的react diff的核心
   function reconcileChildrenIterator(returnFiber, currentFirstChild, newChildrenIterable, lanes) {
     // This is the same implementation as reconcileChildrenArray(),
     // but using the iterator instead.
@@ -10672,6 +10676,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     var nextOldFiber = null;
     var step = newChildren.next();
 
+    // 第一次遍历，新旧列表都有值的时候
     for (; oldFiber !== null && !step.done; newIdx++, step = newChildren.next()) {
       if (oldFiber.index > newIdx) {
         nextOldFiber = oldFiber;
@@ -10719,12 +10724,14 @@ function ChildReconciler(shouldTrackSideEffects) {
       oldFiber = nextOldFiber;
     }
 
+    // 加入新的遍历完了，删除所有旧的
     if (step.done) {
       // We've reached the end of the new children. We can delete the rest.
       deleteRemainingChildren(returnFiber, oldFiber);
       return resultingFirstChild;
     }
 
+    // 加入旧的遍历完了，创建所有新的
     if (oldFiber === null) {
       // If we don't have any more existing children we can choose a fast path
       // since the rest will all be insertions.
@@ -10751,8 +10758,10 @@ function ChildReconciler(shouldTrackSideEffects) {
     } // Add all children to a key map for quick lookups.
 
 
+    // 旧的创建一个Map
     var existingChildren = mapRemainingChildren(returnFiber, oldFiber); // Keep scanning and use the map to restore deleted items as moves.
 
+    // 新的继续遍历，复用能复用的
     for (; !step.done; newIdx++, step = newChildren.next()) {
       var _newFiber4 = updateFromMap(existingChildren, returnFiber, newIdx, step.value, lanes);
 
@@ -10810,6 +10819,15 @@ function ChildReconciler(shouldTrackSideEffects) {
     return created;
   }
 
+//   函数 reconcileSingleElement 是 React Fiber Reconciler 的一部分，主要负责处理单个 React 元素与当前 Fiber 节点树的协调过程。这个函数的核心目的是尝试复用已有的 Fiber 节点或者根据新的 React 元素创建新的 Fiber 节点。下面是该函数详细的逐行解释：
+// 参数
+// returnFiber：当前正在处理的 Fiber 节点的父级。
+// currentFirstChild：当前 Fiber 节点的第一个子节点。
+// element：新的 React 元素，将被用来更新或创建 Fiber 节点。
+// lanes：表示此任务的优先级和其他元数据的数据结构。
+// 所以此处的比较是将整个childList 和某个element进行对比，找到可以复用的单个节点？
+// 是的，您的理解是正确的。在 reconcileSingleElement 函数中，React 实际上是将整个 childList（通过 currentFirstChild 开始的链表）与单个传入的 element 进行比较，以寻找可以复用的节点。
+
   function reconcileSingleElement(returnFiber, currentFirstChild, element, lanes) {
     var key = element.key;
     var child = currentFirstChild;
@@ -10818,12 +10836,18 @@ function ChildReconciler(shouldTrackSideEffects) {
       // TODO: If key === null and child.key === null, then this only applies to
       // the first item in the list.
       if (child.key === key) {
+
+        // 基于子节点的类型（tag），处理不同类型的节点。
         switch (child.tag) {
           case Fragment:
             {
               if (element.type === REACT_FRAGMENT_TYPE) {
+                // 删除当前节点后的所有兄弟节点，因为我们要复用这个节点。
                 deleteRemainingChildren(returnFiber, child.sibling);
+                // 复用当前的 Fiber 节点，并使用新元素的子元素作为 props。
                 var existing = useFiber(child, element.props.children);
+                // 更新复用节点的 return 属性，指向父级 Fiber
+                // fiber节点的return 是指向父元素
                 existing.return = returnFiber;
 
                 return existing;
@@ -10884,16 +10908,19 @@ function ChildReconciler(shouldTrackSideEffects) {
         deleteChild(returnFiber, child);
       }
 
+      // 
       child = child.sibling;
     }
 
+    //没有找到可复用的节点。 且新元素是 Fragment 类型
     if (element.type === REACT_FRAGMENT_TYPE) {
       var created = createFiberFromFragment(element.props.children, returnFiber.mode, lanes, element.key);
       created.return = returnFiber;
       return created;
     } else {
+      // 创建一个新的元素类型的 Fiber 节点。
       var _created4 = createFiberFromElement(element, returnFiber.mode, lanes);
-
+     // 更新ref
       _created4.ref = coerceRef(returnFiber, currentFirstChild, element);
       _created4.return = returnFiber;
       return _created4;
@@ -11763,6 +11790,7 @@ function mountWorkInProgressHook() {
     workInProgressHook = workInProgressHook.next = hook;
   }
 
+  // 这是当前正在处理的Hook的引用，在函数执行过程中，它会更新以指向下一个正在处理的Hook。
   return workInProgressHook;
 }
 
@@ -20072,17 +20100,23 @@ function createContainer(containerInfo, tag, hydrate, hydrationCallbacks) {
 }
 
 
+// 这个updateContainer函数是React中处理容器更新的关键函数之一。它主要用于将新的React元素更新到容器中，并安排渲染。以下是对这个函数的逐行解释：
 function updateContainer(element, container, parentComponent, callback) {
+
   console.log(`run function [${arguments.callee.name}]`)
+  // fiber的根结点
   var current = container.current;
+  // 调用 requestEventTime 获取事件的时间戳，这个时间戳用来记录更新发生的时刻，有助于 React 的调度系统管理更新的优先级。
   var eventTime = requestEventTime();
 
+  // 调用 requestUpdateLane 来确定本次更新的优先级。
   var lane = requestUpdateLane(current);
 
   {
     markRenderScheduled(lane);
   }
 
+  // 获取context
   var context = getContextForSubtree(parentComponent);
 
   if (container.context === null) {
@@ -20397,7 +20431,7 @@ function legacyCreateRootFromDOMContainer(container, forceHydrate) {
 
 function legacyRenderSubtreeIntoContainer(parentComponent, children, container, forceHydrate, callback) {
   // member of intersection type." Whyyyyyy.
-
+ debugger
 
   var root = container._reactRootContainer;
   var fiberRoot;
@@ -20418,6 +20452,7 @@ function legacyRenderSubtreeIntoContainer(parentComponent, children, container, 
 
 
     unbatchedUpdates(function () {
+      // 根节点只有一个子元素
       updateContainer(children, fiberRoot, parentComponent, callback);
     });
   } else {
@@ -20468,6 +20503,7 @@ function render(element, container, callback) {
       throw Error( formatProdErrorMessage(200));
     }
   }
+
 
   return legacyRenderSubtreeIntoContainer(null, element, container, false, callback);
 }
