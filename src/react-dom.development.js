@@ -17343,10 +17343,13 @@ function requestRetryLane(fiber) {
 
 // 调度更新
 function scheduleUpdateOnFiber(fiber, lane, eventTime) {
-  console.log(`run function [${arguments.callee.name}]`)
+  console.log(`run function [${arguments.callee.name}]`, fiber)
   checkForNestedUpdates();
   
   // 会从当前 fiber 开始往上找到 HostRootFiber，然后从 HostRootFiber 开始更新。
+//   调用 markUpdateLaneFromFiberToRoot(fiber, lane) 从当前 Fiber 节点开始向上遍历，直到找到根节点（HostRootFiber）。这个函数会标记路径上所有节点的 lanes 属性，指示它们有待处理的更新。
+// 如果没有找到根节点（例如，Fiber 被卸载），则直接返回 null。
+  
   var root = markUpdateLaneFromFiberToRoot(fiber, lane);
 
   if (root === null) {
@@ -17354,8 +17357,10 @@ function scheduleUpdateOnFiber(fiber, lane, eventTime) {
   } // Mark that the root has a pending update.
 
 
+  // 使用 markRootUpdated(root, lane, eventTime) 标记根节点有待处理的更新，并记录更新的时间。
   markRootUpdated(root, lane, eventTime);
 
+  // 并发模式可能会有多个root，但是17版本其实没有
   if (root === workInProgressRoot) {
     // Received an update to a tree that's in the middle of rendering. Mark
     // that there was an interleaved update work on this root. Unless the
@@ -17366,6 +17371,7 @@ function scheduleUpdateOnFiber(fiber, lane, eventTime) {
       workInProgressRootUpdatedLanes = mergeLanes(workInProgressRootUpdatedLanes, lane);
     }
 
+    // 如果当前的根节点已经因为延迟而挂起（RootSuspendedWithDelay），则使用 markRootSuspended$1 来标记根节点为挂起状态。
     if (workInProgressRootExitStatus === RootSuspendedWithDelay) {
       // The root already suspended with a delay, which means this render
       // definitely won't finish. Since we have a new update, let's mark it as
@@ -17386,12 +17392,14 @@ function scheduleUpdateOnFiber(fiber, lane, eventTime) {
     (executionContext & LegacyUnbatchedContext) !== NoContext && // Check if we're not already rendering
     (executionContext & (RenderContext | CommitContext)) === NoContext) {
       // Register pending interactions on the root to avoid losing traced interaction data.
+      // 调用 schedulePendingInteractions(root, lane) 来安排与当前更新相关的用户交互
       schedulePendingInteractions(root, lane); // This is a legacy edge case. The initial mount of a ReactDOM.render-ed
       // root inside of batchedUpdates should be synchronous, but layout updates
       // should be deferred until the end of the batch.
 
       performSyncWorkOnRoot(root);
     } else {
+      // ensureRootIsScheduled 确保根节点被调度
       ensureRootIsScheduled(root, eventTime);
       schedulePendingInteractions(root, lane);
 
@@ -17760,22 +17768,30 @@ function markRootSuspended$1(root, suspendedLanes) {
 
 
 function performSyncWorkOnRoot(root) {
+  // 确保当前不处于渲染或提交阶段
   if (!((executionContext & (RenderContext | CommitContext)) === NoContext)) {
     {
       throw Error( formatProdErrorMessage(327));
     }
   }
 
+  // 尝试清除任何未完成的被动效应
   flushPassiveEffects();
   var lanes;
   var exitStatus;
 
-  if (root === workInProgressRoot && includesSomeLane(root.expiredLanes, workInProgressRootRenderLanes)) {
+   // 检查是否存在部分已渲染的树，且其中一部分的渲染通道已过期
+   // 正在处理的根节点（root）:
+   // 工作中的根节点（workInProgressRoot）:这是当前正在渲染或准备渲染的根节点的版本。在 React 的并发模式中，可以同时存在多个根节点的版本：一份在屏幕上显示的已完成工作的版本，以及正在进行的工作版本（work-in-progress）
+   // 在 React 的渲染过程中，如果高优先级的更新打断了当前的渲染过程，当前的工作进度（workInProgressRoot）会被保留以便未来恢复和完成。如果 root === workInProgressRoot 成立，说明当前正在处理的根节点正是之前被中断的工作，React 需要在此基础上继续进行工作，而不是重新开始。
+   if (root === workInProgressRoot && includesSomeLane(root.expiredLanes, workInProgressRootRenderLanes)) {
     // There's a partial tree, and at least one of its lanes has expired. Finish
     // rendering it before rendering the rest of the expired work.
+    // 使用当前工作中根的渲染通道继续渲染
     lanes = workInProgressRootRenderLanes;
     exitStatus = renderRootSync(root, lanes);
 
+    // 如果在渲染阶段更新了包括的通道，则重新获取通道并再次渲染
     if (includesSomeLane(workInProgressRootIncludedLanes, workInProgressRootUpdatedLanes)) {
       // The render included lanes that were updated during the render phase.
       // For example, when unhiding a hidden tree, we include all the lanes
@@ -17789,10 +17805,13 @@ function performSyncWorkOnRoot(root) {
       exitStatus = renderRootSync(root, lanes);
     }
   } else {
+    // 如果 root 不是 workInProgressRoot，则可能表示当前的工作已经过时或与最新调度的更新不匹配。React 可能需要放弃这个过时的工作，转而处理新的或更高优先级的更新。
+     // 否则，从头开始渲染根节点
     lanes = getNextLanes(root, NoLanes);
     exitStatus = renderRootSync(root, lanes);
   }
 
+  // 如果在非遗留模式下遇到错误，并且是水合错误，重置水合标志并清空容器
   if (root.tag !== LegacyRoot && exitStatus === RootErrored) {
     executionContext |= RetryAfterError; // If an error occurred during hydration,
     // discard server response and fall back to client side render.
@@ -18174,6 +18193,7 @@ function renderHasNotSuspendedYet() {
 function renderRootSync(root, lanes) {
   var prevExecutionContext = executionContext;
   executionContext |= RenderContext;
+  // 调度器
   var prevDispatcher = pushDispatcher(); // If the root or lanes have changed, throw out the existing stack
   // and prepare a fresh one. Otherwise we'll continue where we left off.
 
@@ -18303,30 +18323,38 @@ function workLoopConcurrent() {
 }
 
 function performUnitOfWork(unitOfWork) {
-  // The current, flushed, state of this fiber is the alternate. Ideally
-  // nothing should rely on this, but relying on it here means that we don't
-  // need an additional field on the work in progress.
+  // `current`指向该工作单元的备用版本（alternate），这是Fiber架构的一部分，其中每个Fiber节点都有一个备用节点，
+  // 这样可以在不影响当前屏幕上显示内容的情况下进行工作。
   var current = unitOfWork.alternate;
   var next;
 
-  if ( (unitOfWork.mode & ProfileMode) !== NoMode) {
+  // 检查当前工作单元是否在profile模式下执行。
+  // 如果是，在执行工作之前和之后分别开始和停止计时器，以便于性能分析。
+  if ((unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
     next = beginWork$1(current, unitOfWork, subtreeRenderLanes);
     stopProfilerTimerIfRunningAndRecordDelta(unitOfWork, true);
   } else {
+    // 如果不在profile模式下，直接开始处理工作。
     next = beginWork$1(current, unitOfWork, subtreeRenderLanes);
   }
+
+  // 将工作单元的`pendingProps`赋值给`memoizedProps`，
+  // 这意味着这些props已经处理完毕并被记录下来。
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
 
+  // 如果`beginWork`返回`null`，说明当前Fiber节点及其子树已经处理完毕，可以进行收尾工作。
   if (next === null) {
-    // If this doesn't spawn new work, complete the current work.
     completeUnitOfWork(unitOfWork);
   } else {
+    // 如果存在下一个工作单元，将`workInProgress`指针指向它，继续执行。
     workInProgress = next;
   }
 
+  // 清除对当前组件所有者的引用，避免内存泄漏。
   ReactCurrentOwner$2.current = null;
 }
+
 
 function completeUnitOfWork(unitOfWork) {
   // Attempt to complete the current unit of work, then move to the next
@@ -20431,13 +20459,15 @@ function legacyCreateRootFromDOMContainer(container, forceHydrate) {
 
 function legacyRenderSubtreeIntoContainer(parentComponent, children, container, forceHydrate, callback) {
   // member of intersection type." Whyyyyyy.
- debugger
+//  debugger
 
   var root = container._reactRootContainer;
   var fiberRoot;
 
   if (!root) {
     // Initial mount
+
+    // 创建根节点，然后调用updateContainer
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(container, forceHydrate);
     fiberRoot = root._internalRoot;
 
